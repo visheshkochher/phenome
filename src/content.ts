@@ -240,6 +240,33 @@ export const works: Work[] = [
   },
 ];
 
+// ── About ────────────────────────────────────────────────────────────────────
+// The person behind the name. Contemporary only: what I do now and the training it
+// comes from, no family history.
+// TODO: add specifics as `facts` rows if you want them — years in Berlin, the kind
+// of data work (e.g. forecasting, audio, computer vision), employers, education.
+export const about = {
+  name: 'Vishesh Kochher',
+  head: 'phenome is Vishesh Kochher.',
+  intro: 'A data scientist who took the models into the club.',
+  body: [
+    'Before this I worked in Berlin as a data scientist, turning noisy signals into models ' +
+      'people could act on. I still think that way. I just point it at a room now.',
+    'A room is a noisy signal. Every piece listens to it the way a model would: it learns the ' +
+      'room’s own floor, separates the kick from the air, and decides what counts as an event. ' +
+      'Then it runs a simulation, rules instead of keyframes, and lets the result play out. The ' +
+      'visuals on this page work the same way. They run live on your device, on the same code.',
+    'Berlin is also where I learned what a night can be, in the rooms listed below. I am now ' +
+      'based in New Delhi, bringing that here, and I travel for everything else.',
+  ],
+  facts: [
+    { k: 'Background', v: 'Data scientist, Berlin' },
+    { k: 'Now', v: 'Visual artist, New Delhi' },
+    { k: 'Tools', v: 'TouchDesigner, GLSL, code written from scratch' },
+    { k: 'Plays', v: 'Clubs, festivals, galleries, walls' },
+  ],
+};
+
 export const lineage = {
   head: 'Who I learned from',
   intro:
@@ -465,13 +492,15 @@ export const assets: Asset[] = [
   { label: 'Stills pack', note: '4K frames from the catalogue', href: null },
   { label: 'Showreel', note: '90 seconds, cut to one track', href: null },
 ];
-// A track to hear the page react to, played from SoundCloud (no pre-roll ads, unlike
-// YouTube). The iframe's audio can't be read directly (it is another origin), so the
-// page hears it the same way it hears a club: through the mic, off the speakers.
-// `startAt` is in seconds. Set to null to remove the button.
-export const demoTrack: { title: string; artist: string; soundcloudUrl: string; startAt: number } | null = {
-  title: 'Dew (feat. Sidharth Bharadwaj)',
-  artist: 'Alboe',
-  soundcloudUrl: 'https://soundcloud.com/iamalboe/dew-feat-sidharth-bharadwaj',   // embedding allowed
-  startAt: 20,
+// A track to hear the page react to. The clip is served from public/ (a 2 MB cut of the
+// release), so it starts on the visitor's tap on any phone and the page analyses it
+// directly. `src` is relative to the site root. Set to null to remove the button.
+export const demoTrack: {
+  title: string; artist: string; src: string; credit: string; url: string;
+} | null = {
+  title: 'Dhuan',
+  artist: 'Alboe & Mai3ya',
+  src: 'audio/dhuan.m4a',
+  credit: 'Produced by Alboe · written by Vedant Chandra & Manreet Khara · ℗ 2026 Naye Records',
+  url: 'https://www.youtube.com/watch?v=529qp9dqH1A',
 };

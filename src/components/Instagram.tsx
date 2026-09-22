@@ -92,7 +92,7 @@ export function Instagram() {
     <section className="section" id="instagram">
       <div className="wrap">
         <Reveal className="section-head">
-          <span className="label">Recent · 06</span>
+          <span className="label">Recent · 07</span>
           <div>
             <h2 className="section-title">What it looks like in a room.</h2>
             <p className="lede">

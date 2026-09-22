@@ -3,6 +3,7 @@ import { artist } from '../content';
 
 const LINKS = [
   ['Work', '#work'],
+  ['About', '#about'],
   ['Lineage', '#lineage'],
   ['Formats', '#formats'],
   ['Rig', '#rig'],

@@ -51,7 +51,8 @@ function LiveCue() {
   const hearing = d.source === 'mic' && d.hearing;
 
   const line =
-    d.source === 'mic'
+    d.trackPlaying ? `Everything on this page is moving with “${demoTrack?.title}” — read straight from the track.`
+    : d.source === 'mic'
       ? d.needsTap ? 'This page listens to your room. Tap anywhere to let it hear.'
       : hearing ? 'It can hear you. Everything on this page is moving with the sound in your room.'
       : 'This page is listening. Play some music out loud, or clap — and watch it move.'
@@ -68,7 +69,7 @@ function LiveCue() {
       <div className="hero-live-actions">
         {demoTrack && !songOpen && (
           <button className="cue-btn primary" onClick={playSong}>
-            ▶ Play “{demoTrack.title.replace(/ \(.*\)$/, '')}” — {demoTrack.artist}
+            ▶ Play “{demoTrack.title}” — {demoTrack.artist}
           </button>
         )}
         {d.source !== 'mic' && (

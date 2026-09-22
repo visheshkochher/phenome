@@ -4,7 +4,7 @@
 // visitor who doesn't know the page listens will never go looking for a switch), a
 // synthetic bar-aware pattern (the fallback, and what fills in while the room is
 // quiet), or the manual sliders. This mirrors the real rig — band envelopes with
-// attack/decay, never raw amplitude.
+// attack/decay, never raw amplitude. The demo track, while it plays, overrides all three.
 
 export type Bands = { bass: number; mid: number; high: number; hit: number };
 export type Source = 'demo' | 'mic' | 'manual';
@@ -23,6 +23,18 @@ export class AudioDrive {
   hearing = false;
   /** The mic is granted but the browser wants a tap before audio can run. */
   needsTap = false;
+
+  /**
+   * The demo track, while it is playing. It is served from this page's own origin, so
+   * it can start on the tap that asked for it (phones refuse that to a cross-origin
+   * embed) and be analysed directly — no mic needed, and it works on headphones. While
+   * it plays it drives the page, whatever the source switch says.
+   */
+  trackPlaying = false;
+  track: HTMLAudioElement | null = null;
+  private trackCtx: AudioContext | null = null;
+  private trackAnalyser: AnalyserNode | null = null;
+  private trackFreq: Uint8Array<ArrayBuffer> | null = null;
 
   private listeners = new Set<() => void>();
   private version = 0;
@@ -113,8 +125,7 @@ export class AudioDrive {
       src.connect(analyser);
       this.ctx = ctx; this.analyser = analyser; this.stream = stream;
       this.freq = new Uint8Array(new ArrayBuffer(analyser.frequencyBinCount));
-      this.floor = { bass: 1, mid: 1, high: 1, hit: 0 };
-      this.peak = { bass: 0, mid: 0, high: 0, hit: 0 };
+      this.resetCalibration();
       this.presence = 0; this.lastHeard = -1e9;
       this.micReady = true; this.micError = null; this.source = 'mic';
       this.emit();
@@ -125,6 +136,53 @@ export class AudioDrive {
       this.emit();
       return false;
     }
+  }
+
+  /** Start the demo track. Call it straight from a click so the browser allows sound. */
+  playTrack(url: string) {
+    if (!this.track) {
+      const el = new Audio(url);
+      el.preload = 'auto';
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 1024;
+      analyser.smoothingTimeConstant = 0.6;
+      // A line-level signal, far hotter than a mic across a room.
+      analyser.minDecibels = -90;
+      analyser.maxDecibels = -10;
+      ctx.createMediaElementSource(el).connect(analyser);
+      analyser.connect(ctx.destination);
+      const sync = () => {
+        const on = !el.paused && !el.ended;
+        if (on && !this.trackPlaying) this.resetCalibration();
+        this.trackPlaying = on;
+        this.emit();
+      };
+      ['play', 'pause', 'ended'].forEach((e) => el.addEventListener(e, sync));
+      this.track = el; this.trackCtx = ctx; this.trackAnalyser = analyser;
+      this.trackFreq = new Uint8Array(new ArrayBuffer(analyser.frequencyBinCount));
+    }
+    // iOS routes Web Audio as "ambient", which the silent switch mutes. Ask for media
+    // playback instead — unless the mic is live, which needs the session it already has.
+    const session = (navigator as any).audioSession;
+    if (session && !this.micReady) { try { session.type = 'playback'; } catch {} }
+    this.trackCtx!.resume().catch(() => {});
+    if (this.track.ended) this.track.currentTime = 0;
+    this.track.play().catch(() => {});
+  }
+
+  pauseTrack() { this.track?.pause(); }
+
+  stopTrack() {
+    if (!this.track) return;
+    this.track.pause();
+    this.track.currentTime = 0;
+    this.resetCalibration();
+  }
+
+  private resetCalibration() {
+    this.floor = { bass: 1, mid: 1, high: 1, hit: 0 };
+    this.peak = { bass: 0, mid: 0, high: 0, hit: 0 };
   }
 
   disableMic() {
@@ -140,7 +198,8 @@ export class AudioDrive {
   /** Called once per animation frame. `t` is seconds, `dt` the frame delta. */
   update(t: number, dt: number) {
     let target: Bands;
-    if (this.source === 'mic' && this.analyser && this.freq) target = this.mixMic(t, dt);
+    if (this.trackPlaying && this.trackAnalyser && this.trackFreq) target = this.readBands(this.trackAnalyser, this.trackFreq, this.trackCtx!.sampleRate, dt);
+    else if (this.source === 'mic' && this.analyser && this.freq) target = this.mixMic(t, dt);
     else if (this.source === 'manual') target = { ...this.manual, hit: this.manual.hit };
     else target = this.synth(t);
 
@@ -163,7 +222,7 @@ export class AudioDrive {
 
   /** The mic when the room is making noise, the synthetic pattern (softer) when it isn't. */
   private mixMic(t: number, dt: number): Bands {
-    const m = this.readMic(dt);
+    const m = this.readBands(this.analyser!, this.freq!, this.ctx?.sampleRate ?? 48000, dt);
     if (Math.max(m.bass, m.mid, m.high) > 0.35) this.lastHeard = t;
     const heard = t - this.lastHeard < 2.5;
     this.presence += ((heard ? 1 : 0) - this.presence) * Math.min(1, (heard ? 4 : 0.7) * dt);
@@ -173,10 +232,9 @@ export class AudioDrive {
     return { bass: m.bass * p + s.bass * q, mid: m.mid * p + s.mid * q, high: m.high * p + s.high * q, hit: 0 };
   }
 
-  private readMic(dt: number): Bands {
-    const a = this.analyser!, f = this.freq!;
+  private readBands(a: AnalyserNode, f: Uint8Array<ArrayBuffer>, sampleRate: number, dt: number): Bands {
     a.getByteFrequencyData(f);
-    const rate = (this.ctx?.sampleRate ?? 48000) / 2;
+    const rate = sampleRate / 2;
     const bin = (hz: number) => Math.min(f.length - 1, Math.max(0, Math.round((hz / rate) * f.length)));
     const avg = (lo: number, hi: number) => {
       const a0 = bin(lo), a1 = Math.max(a0 + 1, bin(hi));

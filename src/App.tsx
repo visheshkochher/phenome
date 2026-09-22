@@ -6,7 +6,7 @@ import { Instagram } from './components/Instagram';
 import { Reveal } from './components/Reveal';
 import { useShader } from './gl/useShader';
 import {
-  artist, thesis, lineage, formats, rig, shows, press, assets, emptyStates,
+  artist, about, thesis, lineage, formats, rig, shows, press, assets, emptyStates,
   type Asset,
 } from './content';
 
@@ -43,12 +43,44 @@ function Thesis() {
   );
 }
 
+function About() {
+  return (
+    <section className="section" id="about">
+      <div className="wrap">
+        <Reveal className="section-head">
+          <span className="label">The artist · 02</span>
+          <div>
+            <h2 className="section-title">{about.head}</h2>
+            <p className="lede">{about.intro}</p>
+          </div>
+        </Reveal>
+
+        <div className="about">
+          <Reveal className="about-body">
+            {about.body.map((p) => <p key={p}>{p}</p>)}
+          </Reveal>
+          <Reveal className="about-facts" delay={100}>
+            <dl>
+              {about.facts.map((f) => (
+                <div key={f.k}>
+                  <dt className="label">{f.k}</dt>
+                  <dd>{f.v}</dd>
+                </div>
+              ))}
+            </dl>
+          </Reveal>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function Lineage() {
   return (
     <section className="section" id="lineage">
       <div className="wrap">
         <Reveal className="section-head">
-          <span className="label">Lineage · 02</span>
+          <span className="label">Lineage · 03</span>
           <div>
             <h2 className="section-title">{lineage.head}</h2>
             <p className="lede">{lineage.intro}</p>
@@ -79,7 +111,7 @@ function Formats() {
     <section className="section" id="formats">
       <div className="wrap">
         <Reveal className="section-head">
-          <span className="label">Booking · 03</span>
+          <span className="label">Booking · 04</span>
           <div>
             <h2 className="section-title">Five things you can book.</h2>
             <p className="lede">
@@ -114,7 +146,7 @@ function Rig() {
     <section className="section" id="rig">
       <div className="wrap">
         <Reveal className="section-head">
-          <span className="label">Technical · 04</span>
+          <span className="label">Technical · 05</span>
           <div>
             <h2 className="section-title">{rig.head}</h2>
             <p className="lede">{rig.intro}</p>
@@ -153,7 +185,7 @@ function Shows() {
     <section className="section" id="shows">
       <div className="wrap">
         <Reveal className="section-head">
-          <span className="label">Live · 05</span>
+          <span className="label">Live · 06</span>
           <div>
             <h2 className="section-title">Shows &amp; press.</h2>
           </div>
@@ -238,7 +270,7 @@ function Assets() {
     <section className="section" id="assets">
       <div className="wrap">
         <Reveal className="section-head">
-          <span className="label">Downloads · 07</span>
+          <span className="label">Downloads · 08</span>
           <div>
             <h2 className="section-title">Everything a programmer needs to say yes.</h2>
           </div>
@@ -260,7 +292,7 @@ function Contact() {
       <canvas ref={ref} className="contact-canvas" aria-hidden />
       <div className="contact-veil" />
       <div className="contact-inner wrap">
-        <span className="label">Contact · 08</span>
+        <span className="label">Contact · 09</span>
         <h2 className="contact-big">
           Tell me the room<br />and the record.
         </h2>
@@ -281,7 +313,7 @@ function Contact() {
         </div>
 
         <div className="foot">
-          <span className="label">{artist.name} · artist press kit · 2026</span>
+          <span className="label">{artist.name} · {about.name} · press kit · 2026</span>
           <span className="label">Every visual on this page is generated live</span>
         </div>
       </div>
@@ -297,6 +329,7 @@ export default function App() {
       <main>
         <Thesis />
         <WorkSection />
+        <About />
         <Lineage />
         <Formats />
         <Rig />

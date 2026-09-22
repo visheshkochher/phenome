@@ -19,55 +19,69 @@ export async function pickSource(s: Source) {
   drive.setSource(s);
 }
 
-/** Open the demo track. It needs the mic to be heard, so ask in the same tap. */
+const trackUrl = demoTrack ? import.meta.env.BASE_URL + demoTrack.src : '';
+
+/** Open and start the demo track. Must run inside the click, or phones won't play it. */
 export function playSong() {
+  if (!demoTrack) return;
+  drive.playTrack(trackUrl);
   song.set(true);
-  if (drive.source !== 'mic') pickSource('mic');
+  panelRequest.set(true);
 }
 
-// SoundCloud's widget API, loaded on first play. It is only needed to start the track
-// at `startAt` — the embed URL has no start-time parameter.
-type SCWidget = { bind(e: string, fn: () => void): void; unbind(e: string): void; seekTo(ms: number): void };
-type SCApi = { Widget: ((el: HTMLIFrameElement) => SCWidget) & { Events: { PLAY: string } } };
-let scApi: Promise<SCApi> | null = null;
-function loadSoundCloudApi() {
-  scApi ??= new Promise<SCApi>((resolve, reject) => {
-    const el = document.createElement('script');
-    el.src = 'https://w.soundcloud.com/player/api.js';
-    el.onload = () => resolve((window as any).SC);
-    el.onerror = () => { scApi = null; reject(); };
-    document.head.appendChild(el);
-  });
-  return scApi;
+function closeSong() {
+  drive.stopTrack();
+  song.set(false);
 }
 
-function SoundCloud({ track }: { track: NonNullable<typeof demoTrack> }) {
-  const ref = useRef<HTMLIFrameElement>(null);
+const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
-  // Jump to `startAt` the first time it plays, whether autoplay worked or the visitor
-  // pressed play themselves.
+/** Play/pause, progress and the credit. The page reacts to the track itself, not the mic. */
+function TrackPlayer({ track, playing }: { track: NonNullable<typeof demoTrack>; playing: boolean }) {
+  const bar = useRef<HTMLDivElement>(null);
+  const time = useRef<HTMLSpanElement>(null);
+
   useEffect(() => {
-    if (!track.startAt) return;
-    let live = true;
-    loadSoundCloudApi().then((SC) => {
-      if (!live || !ref.current) return;
-      const w = SC.Widget(ref.current);
-      w.bind(SC.Widget.Events.PLAY, () => { w.unbind(SC.Widget.Events.PLAY); w.seekTo(track.startAt * 1000); });
-    }).catch(() => {});
-    return () => { live = false; };
-  }, [track]);
+    let raf = 0;
+    const tick = () => {
+      raf = requestAnimationFrame(tick);
+      const el = drive.track;
+      if (!el || !bar.current || !time.current) return;
+      const d = el.duration || 0;
+      bar.current.style.transform = `scaleX(${d ? (el.currentTime / d).toFixed(4) : 0})`;
+      time.current.textContent = clock(el.currentTime) + (d ? ` / ${clock(d)}` : '');
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, []);
 
-  const params = new URLSearchParams({
-    url: track.soundcloudUrl, auto_play: 'true', visual: 'true',
-    show_comments: 'false', show_reposts: 'false', show_teaser: 'false', hide_related: 'true',
-  });
+  const seek = (e: React.PointerEvent<HTMLDivElement>) => {
+    const el = drive.track;
+    if (!el?.duration) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    el.currentTime = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * el.duration;
+  };
+
   return (
-    <iframe
-      ref={ref}
-      src={`https://w.soundcloud.com/player/?${params}`}
-      title={`${track.artist} — ${track.title}`}
-      allow="autoplay; encrypted-media"
-    />
+    <div className="track">
+      <div className="track-row">
+        <button
+          className="track-toggle" aria-label={playing ? 'Pause' : 'Play'}
+          onClick={(e) => { e.stopPropagation(); if (playing) drive.pauseTrack(); else drive.playTrack(trackUrl); }}
+        >{playing ? '❚❚' : '▶'}</button>
+        <div className="track-meta">
+          <span className="track-title">{track.title}</span>
+          <span className="track-artist">{track.artist}</span>
+        </div>
+        <span className="track-time" ref={time} />
+      </div>
+      <div className="track-bar" onPointerDown={(e) => { e.stopPropagation(); seek(e); }}>
+        <div className="track-fill" ref={bar} />
+      </div>
+      <p className="track-credit">
+        {track.credit} · <a href={track.url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>Full track ↗</a>
+      </p>
+    </div>
   );
 }
 
@@ -129,7 +143,8 @@ export function Drive() {
   const folded = mode === 'closed' || (mode === 'auto' && (scrolled || phone()) && !hover);
 
   const status =
-    source === 'mic' ? (d.needsTap ? 'Tap anywhere to let it listen.' : d.hearing ? 'Hearing the room.' : 'Listening — play something out loud.')
+    d.trackPlaying ? `Driven by “${demoTrack?.title}”. Pause it and the switch below takes over again.`
+    : source === 'mic' ? (d.needsTap ? 'Tap anywhere to let it listen.' : d.hearing ? 'Hearing the room.' : 'Listening — play something out loud.')
     : source === 'manual' ? 'You have the faders. This is the surface a show is performed on.'
     : d.micError ? `${d.micError} Running on a synthetic 124 BPM beat.`
     : 'Synthetic 124 BPM beat. Switch to Room and the page listens to your audio.';
@@ -159,16 +174,10 @@ export function Drive() {
 
       {songOpen && demoTrack && (
         <div className="drive-player">
-          <div className="drive-video">
-            <SoundCloud track={demoTrack} />
-          </div>
+          <TrackPlayer track={demoTrack} playing={d.trackPlaying} />
           <div className="drive-player-row">
-            <span className="drive-note">
-              {source === 'mic'
-                ? 'Play it out loud — the page hears it through the mic. On headphones it can’t.'
-                : 'Switch to Room so the page can hear it.'}
-            </span>
-            <button className="drive-close" onClick={(e) => { e.stopPropagation(); song.set(false); }}>Close</button>
+            <span className="drive-note">The page is reading the track directly — headphones are fine.</span>
+            <button className="drive-close" onClick={(e) => { e.stopPropagation(); closeSong(); }}>Close</button>
           </div>
         </div>
       )}
@@ -176,7 +185,7 @@ export function Drive() {
       {BANDS.map(([label, key], i) => (
         <div className="meter" key={key}>
           <span className="label">{label}</span>
-          {source === 'manual' ? (
+          {source === 'manual' && !d.trackPlaying ? (
             <input
               type="range" min={0} max={1} step={0.01}
               defaultValue={drive.manual[key]}
@@ -195,7 +204,7 @@ export function Drive() {
 
       {demoTrack && !songOpen && (
         <button className="drive-song" onClick={(e) => { e.stopPropagation(); playSong(); }}>
-          ▶ Play {demoTrack.title.replace(/ \(.*\)$/, '')} — {demoTrack.artist}
+          ▶ Play “{demoTrack.title}” — {demoTrack.artist}
         </button>
       )}
     </aside>
