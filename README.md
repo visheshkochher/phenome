@@ -115,9 +115,18 @@ frame, round-robin, and whatever the pointer is on gets every frame. `prefers-re
 draws a few frames and then holds a still.
 
 `audio.ts` is the same shape as the real rig — band envelopes with fast attack and slow
-release, never raw amplitude. Three sources: a synthetic 124 BPM pattern with a 16-bar build
-(the default, so the page is alive with no permission prompt), the visitor's microphone, and
-manual faders.
+release, never raw amplitude. Three sources: the visitor's microphone (**asked for on load** —
+a visitor from a cold email won't go looking for a switch), a synthetic 124 BPM pattern with a
+16-bar build, and manual faders. If the mic is refused or missing, the page runs on the demo
+beat and the hero says so. In a quiet room the demo beat fills in softly until the mic hears
+something, so the page never looks dead. An explicit choice of Demo or Manual is remembered, so
+a reload doesn't ask again.
+
+The hero carries a plain-language cue ("This page is listening…") with buttons to play a track,
+allow the mic, or take the faders. The track is `demoTrack` in `content.ts` (YouTube, embed
+allowed; `null` removes it). The page can't read the iframe's audio because it comes from
+another origin. It hears the track the way it hears a club, through the mic off the speakers,
+so it does nothing on headphones.
 
 ## Assets that would make this stronger
 
