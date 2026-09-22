@@ -25,6 +25,52 @@ export function playSong() {
   if (drive.source !== 'mic') pickSource('mic');
 }
 
+// SoundCloud's widget API, loaded on first play. It is only needed to start the track
+// at `startAt` — the embed URL has no start-time parameter.
+type SCWidget = { bind(e: string, fn: () => void): void; unbind(e: string): void; seekTo(ms: number): void };
+type SCApi = { Widget: ((el: HTMLIFrameElement) => SCWidget) & { Events: { PLAY: string } } };
+let scApi: Promise<SCApi> | null = null;
+function loadSoundCloudApi() {
+  scApi ??= new Promise<SCApi>((resolve, reject) => {
+    const el = document.createElement('script');
+    el.src = 'https://w.soundcloud.com/player/api.js';
+    el.onload = () => resolve((window as any).SC);
+    el.onerror = () => { scApi = null; reject(); };
+    document.head.appendChild(el);
+  });
+  return scApi;
+}
+
+function SoundCloud({ track }: { track: NonNullable<typeof demoTrack> }) {
+  const ref = useRef<HTMLIFrameElement>(null);
+
+  // Jump to `startAt` the first time it plays, whether autoplay worked or the visitor
+  // pressed play themselves.
+  useEffect(() => {
+    if (!track.startAt) return;
+    let live = true;
+    loadSoundCloudApi().then((SC) => {
+      if (!live || !ref.current) return;
+      const w = SC.Widget(ref.current);
+      w.bind(SC.Widget.Events.PLAY, () => { w.unbind(SC.Widget.Events.PLAY); w.seekTo(track.startAt * 1000); });
+    }).catch(() => {});
+    return () => { live = false; };
+  }, [track]);
+
+  const params = new URLSearchParams({
+    url: track.soundcloudUrl, auto_play: 'true', visual: 'true',
+    show_comments: 'false', show_reposts: 'false', show_teaser: 'false', hide_related: 'true',
+  });
+  return (
+    <iframe
+      ref={ref}
+      src={`https://w.soundcloud.com/player/?${params}`}
+      title={`${track.artist} — ${track.title}`}
+      allow="autoplay; encrypted-media"
+    />
+  );
+}
+
 /**
  * The page's own control surface. It is the pitch in miniature: the same band
  * envelopes that drive a show are driving everything on screen, and a visitor can
@@ -114,12 +160,7 @@ export function Drive() {
       {songOpen && demoTrack && (
         <div className="drive-player">
           <div className="drive-video">
-            <iframe
-              src={`https://www.youtube-nocookie.com/embed/${demoTrack.youtubeId}?autoplay=1&playsinline=1&rel=0`}
-              title={`${demoTrack.artist} — ${demoTrack.title}`}
-              allow="autoplay; encrypted-media; picture-in-picture"
-              referrerPolicy="strict-origin-when-cross-origin"
-            />
+            <SoundCloud track={demoTrack} />
           </div>
           <div className="drive-player-row">
             <span className="drive-note">

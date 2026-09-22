@@ -123,8 +123,8 @@ something, so the page never looks dead. An explicit choice of Demo or Manual is
 a reload doesn't ask again.
 
 The hero carries a plain-language cue ("This page is listening…") with buttons to play a track,
-allow the mic, or take the faders. The track is `demoTrack` in `content.ts` (YouTube, embed
-allowed; `null` removes it). The page can't read the iframe's audio because it comes from
+allow the mic, or take the faders. The track is `demoTrack` in `content.ts` (SoundCloud, with a start
+time; `null` removes it). The page can't read the iframe's audio because it comes from
 another origin. It hears the track the way it hears a club, through the mic off the speakers,
 so it does nothing on headphones.
 

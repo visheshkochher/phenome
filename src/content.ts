@@ -465,11 +465,13 @@ export const assets: Asset[] = [
   { label: 'Stills pack', note: '4K frames from the catalogue', href: null },
   { label: 'Showreel', note: '90 seconds, cut to one track', href: null },
 ];
-// A track to hear the page react to, played from YouTube. The iframe's audio can't be
-// read directly (it is another origin), so the page hears it the same way it hears a
-// club: through the mic, off the speakers. Set to null to remove the button.
-export const demoTrack: { title: string; artist: string; youtubeId: string } | null = {
-  title: 'Haul (feat. Mohna)',
-  artist: 'Christian Löffler',
-  youtubeId: '_K-isImH-jc',   // official upload on Christian Löffler's channel; embedding allowed
+// A track to hear the page react to, played from SoundCloud (no pre-roll ads, unlike
+// YouTube). The iframe's audio can't be read directly (it is another origin), so the
+// page hears it the same way it hears a club: through the mic, off the speakers.
+// `startAt` is in seconds. Set to null to remove the button.
+export const demoTrack: { title: string; artist: string; soundcloudUrl: string; startAt: number } | null = {
+  title: 'Dew (feat. Sidharth Bharadwaj)',
+  artist: 'Alboe',
+  soundcloudUrl: 'https://soundcloud.com/iamalboe/dew-feat-sidharth-bharadwaj',   // embedding allowed
+  startAt: 20,
 };
