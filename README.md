@@ -87,9 +87,11 @@ Each `assets` entry renders one of three ways, from its `href`:
 `.github/workflows/deploy.yml` builds and publishes on every push to `main`. The repo must
 be **public** — Pages on private repos needs a paid plan.
 
-One-time setup: **Settings → Pages → Source = GitHub Actions**. The workflow's
-`configure-pages` step tries to set this automatically on the first run; if it fails, flip
-it by hand and re-run the job.
+**Required once, by hand: Settings → Pages → Source = GitHub Actions.** The workflow
+cannot do this for you — the Actions token is allowed to deploy to an existing Pages site
+but not to create one, so until the toggle is set every run fails at `configure-pages`
+with `Resource not accessible by integration`. Set it, then re-run the job from the
+Actions tab.
 
 `BASE_PATH` is set to `/<repo-name>/` automatically, which is what a project page needs.
 
